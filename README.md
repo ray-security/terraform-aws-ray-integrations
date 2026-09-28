@@ -153,17 +153,6 @@ created. Change a value and run `terraform apply` again, or remove everything wi
 terraform destroy
 ```
 
-## Can't reach github.com or the Terraform Registry?
-
-Every release is also published as a zip. Use it as the module source instead:
-
-```hcl
-source = "https://gateway.raysecurity.io/gcp/storage/raysecurity-k3s-public/terraform-modules/aws-customer/v1.0.0/terraform-aws-ray-integrations.zip"
-# or directly: https://storage.googleapis.com/raysecurity-k3s-public/terraform-modules/aws-customer/v1.0.0/terraform-aws-ray-integrations.zip
-```
-
-Remove the `version` line when you use a URL source. A `.sha256` file sits next to each zip.
-
 ## Inputs
 
 | Name | Description | Default |
