@@ -46,7 +46,7 @@ unzip terraform_1.9.8_linux_amd64.zip -d ~/bin && export PATH=~/bin:$PATH
 terraform version
 ```
 
-You should see `Terraform v1.6` or newer. OpenTofu (`tofu`) works too.
+You should see `Terraform v1.6` or newer. Use Terraform, not OpenTofu: `tofu` looks modules up in its own registry, where this module is not published.
 
 ## Step 2 — Sign in to the AWS account
 
