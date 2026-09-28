@@ -23,6 +23,11 @@ jobs:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
 
+      - name: Version
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::VERSION must be X.Y.Z, got '${version}'"; exit 1; }
+
       - name: Format
         run: terraform fmt -check -recursive
 
