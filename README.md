@@ -183,4 +183,4 @@ terraform destroy
 | [`modules/role`](modules/role) | an IAM role that trusts the Ray Security AWS account with your External ID |
 | [`modules/s3-access`](modules/s3-access) | the read-only inline policy for S3, KMS, IAM, CloudTrail, AWS Config and Access Analyzer |
 | [`modules/identity-center-access`](modules/identity-center-access) | the read-only inline policy for Identity Store, SSO Admin and Organizations |
-| [`modules/access-analyzer`](modules/access-analyzer) | an account-internal analyzer per region, archiving findings for other resource types |
+| [`modules/access-analyzer`](modules/access-analyzer) | an account-internal analyzer per region, analyzing S3 buckets only |

@@ -4,9 +4,23 @@ variable "regions" {
 }
 
 variable "resource_types" {
-  description = "Resource types to keep findings for; findings for every other type are archived. Valid types: AWS::S3::Bucket, AWS::IAM::Role, AWS::KMS::Key, AWS::Lambda::Function, AWS::SQS::Queue, AWS::SecretsManager::Secret, AWS::SNS::Topic, AWS::EFS::FileSystem, AWS::EC2::Snapshot, AWS::ECR::Repository, AWS::RDS::DBSnapshot, AWS::RDS::DBClusterSnapshot, AWS::DynamoDB::Table, AWS::DynamoDB::Stream"
+  description = "Resource types the analyzer analyzes; it generates findings for these types only"
   type        = list(string)
   default     = ["AWS::S3::Bucket"]
+
+  validation {
+    condition = alltrue([
+      for resource_type in var.resource_types : contains([
+        "AWS::S3::Bucket",
+        "AWS::S3Express::DirectoryBucket",
+        "AWS::RDS::DBSnapshot",
+        "AWS::RDS::DBClusterSnapshot",
+        "AWS::DynamoDB::Table",
+        "AWS::DynamoDB::Stream",
+      ], resource_type)
+    ])
+    error_message = "Internal access analyzers support only AWS::S3::Bucket, AWS::S3Express::DirectoryBucket, AWS::RDS::DBSnapshot, AWS::RDS::DBClusterSnapshot, AWS::DynamoDB::Table and AWS::DynamoDB::Stream."
+  }
 }
 
 variable "tags" {
