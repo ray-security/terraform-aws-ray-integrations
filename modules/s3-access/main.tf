@@ -90,7 +90,9 @@ data "aws_iam_policy_document" "additional_read_access" {
       "access-analyzer:ListAnalyzers",
       "access-analyzer:GetAnalyzer",
       "access-analyzer:ListFindings",
-      "access-analyzer:GetFinding"
+      "access-analyzer:GetFinding",
+      "access-analyzer:ListFindingsV2",
+      "access-analyzer:GetFindingV2"
     ]
 
     resources = ["*"]
