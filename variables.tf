@@ -9,6 +9,17 @@ variable "external_id" {
   }
 }
 
+variable "account_id" {
+  description = "12-digit ID of the AWS account this configuration is for. When set, plan fails before any change unless the AWS credentials belong to that account"
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.account_id == null || can(regex("^[0-9]{12}$", var.account_id))
+    error_message = "account_id must be a 12-digit AWS account ID."
+  }
+}
+
 variable "trusted_account_arn" {
   description = "AWS principal allowed to assume the roles. Change it only if the setup screen shows a different trusted principal"
   type        = string

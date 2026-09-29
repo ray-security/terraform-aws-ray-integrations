@@ -142,3 +142,22 @@ run "external_id_required" {
 
   expect_failures = [var.external_id]
 }
+
+run "account_id_must_be_12_digits" {
+  command = plan
+
+  variables {
+    account_id = "12345"
+  }
+
+  expect_failures = [var.account_id]
+}
+
+run "no_account_check_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(data.aws_caller_identity.current) == 0
+    error_message = "without account_id the module must not call STS"
+  }
+}

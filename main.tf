@@ -1,3 +1,14 @@
+data "aws_caller_identity" "current" {
+  count = var.account_id == null ? 0 : 1
+
+  lifecycle {
+    postcondition {
+      condition     = self.account_id == var.account_id
+      error_message = "These AWS credentials are for account ${self.account_id}, but account_id is ${var.account_id}. Sign in to ${var.account_id} (check with aws sts get-caller-identity) and run terraform apply again."
+    }
+  }
+}
+
 module "role" {
   source = "./modules/role"
   count  = var.enable_s3 ? 1 : 0

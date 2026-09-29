@@ -81,14 +81,16 @@ External ID already filled in; copy it from there if you can.
 
 ```hcl
 provider "aws" {
-  region = "us-east-1"
+  region              = "us-east-1"
+  allowed_account_ids = ["123456789012"]   # the account to change
 }
 
 module "ray_security" {
   source  = "ray-security/ray-integrations/aws"
-  version = "~> 1.0"
+  version = "~> 1.1"
 
-  external_id = "REPLACE_ME"   # from the Ray Security S3 setup screen
+  account_id  = "123456789012"   # the same account
+  external_id = "REPLACE_ME"     # from the Ray Security S3 setup screen
 
   # Optional:
   # s3_bucket_names         = ["my-data-bucket", "my-logs-bucket"]  # default: all buckets
@@ -101,6 +103,9 @@ output "role_arn" {
   value = module.ray_security.role_arn
 }
 ```
+
+Both account lines stop Terraform when you are signed in to a different account, before it changes anything.
+`allowed_account_ids` stops it earliest; `account_id` also names the account in the error.
 
 Downloaded this repository instead? Use [`examples/basic/main.tf`](examples/basic/main.tf): edit `REPLACE_ME`
 and run the commands below in that folder.
@@ -158,6 +163,7 @@ terraform destroy
 | Name | Description | Default |
 |---|---|---|
 | `external_id` | External ID from the Ray Security S3 setup screen | required |
+| `account_id` | account this configuration is for; plan fails under other credentials | `null` (no check) |
 | `trusted_account_arn` | AWS principal allowed to assume the roles; change only if the setup screen shows another | `arn:aws:iam::992382604000:root` |
 | `enable_s3` | create the S3 scanning role | `true` |
 | `role_name` | name of the S3 scanning role | `RaySecurityRole` |
