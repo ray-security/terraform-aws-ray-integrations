@@ -14,7 +14,7 @@ The whole install is: install Terraform, sign in to AWS, paste one file, run two
 
 ---
 
-## Step 1 — Install Terraform (1.6 or later)
+## Step 1 — Install Terraform (1.11 or later)
 
 **macOS**
 
@@ -36,8 +36,8 @@ Then close and reopen PowerShell. Without `winget`, download the zip from
 **AWS CloudShell:** it has AWS credentials already but no Terraform. Install it in your home directory:
 
 ```sh
-curl -fsSLO https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
-unzip terraform_1.9.8_linux_amd64.zip -d ~/bin && export PATH=~/bin:$PATH
+curl -fsSLO https://releases.hashicorp.com/terraform/1.11.4/terraform_1.11.4_linux_amd64.zip
+unzip terraform_1.11.4_linux_amd64.zip -d ~/bin && export PATH=~/bin:$PATH
 ```
 
 **Check:**
@@ -46,7 +46,7 @@ unzip terraform_1.9.8_linux_amd64.zip -d ~/bin && export PATH=~/bin:$PATH
 terraform version
 ```
 
-You should see `Terraform v1.6` or newer. Use Terraform, not OpenTofu: `tofu` looks modules up in its own registry, where this module is not published.
+You should see `Terraform v1.11` or newer. Use Terraform, not OpenTofu: `tofu` looks modules up in its own registry, where this module is not published.
 
 ## Step 2 — Sign in to the AWS account
 
@@ -81,14 +81,16 @@ External ID already filled in; copy it from there if you can.
 
 ```hcl
 provider "aws" {
-  region = "us-east-1"
+  region              = "us-east-1"
+  allowed_account_ids = ["123456789012"]   # the account to change
 }
 
 module "ray_security" {
   source  = "ray-security/ray-integrations/aws"
-  version = "~> 1.0"
+  version = "~> 1.1"
 
-  external_id = "REPLACE_ME"   # from the Ray Security S3 setup screen
+  account_id  = "123456789012"   # the same account
+  external_id = "REPLACE_ME"     # from the Ray Security S3 setup screen
 
   # Optional:
   # s3_bucket_names         = ["my-data-bucket", "my-logs-bucket"]  # default: all buckets
@@ -96,11 +98,10 @@ module "ray_security" {
   # access_analyzer_regions = ["us-east-1"]                          # your buckets' regions; AWS charges for it
   # enable_identity_center  = true                                   # management account only
 }
-
-output "role_arn" {
-  value = module.ray_security.role_arn
-}
 ```
+
+Both account lines stop Terraform when you are signed in to a different account, before it changes anything.
+`allowed_account_ids` stops it earliest; `account_id` also names the account in the error.
 
 Downloaded this repository instead? Use [`examples/basic/main.tf`](examples/basic/main.tf): edit `REPLACE_ME`
 and run the commands below in that folder.
@@ -114,11 +115,11 @@ terraform init
 terraform apply
 ```
 
-Terraform lists what it will create and asks you to type `yes`. It then prints `role_arn`.
+Terraform lists what it will create and asks you to type `yes`. It ends with `Apply complete!`.
 
 ## Step 5 — Connect in Ray Security
 
-On the S3 setup screen, enter the 12-digit AWS account ID (it is inside `role_arn`) and press **Test
+On the S3 setup screen, enter the 12-digit AWS account ID you applied in and press **Test
 connection**. IAM changes can take a few seconds to apply; retry once if the first test fails.
 
 Test connection assumes the role once with your External ID, and twice more without it and with a wrong
@@ -158,6 +159,7 @@ terraform destroy
 | Name | Description | Default |
 |---|---|---|
 | `external_id` | External ID from the Ray Security S3 setup screen | required |
+| `account_id` | account this configuration is for; plan fails under other credentials | `null` (no check) |
 | `trusted_account_arn` | AWS principal allowed to assume the roles; change only if the setup screen shows another | `arn:aws:iam::992382604000:root` |
 | `enable_s3` | create the S3 scanning role | `true` |
 | `role_name` | name of the S3 scanning role | `RaySecurityRole` |
