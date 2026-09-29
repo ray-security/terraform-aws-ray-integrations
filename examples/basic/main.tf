@@ -12,7 +12,7 @@ provider "aws" {
 
 module "ray_security" {
   # Downloaded this repository? Keep "../../".
-  # Writing your own main.tf? Use source = "ray-security/ray-integrations/aws" and version = "~> 1.0".
+  # Writing your own main.tf? Use source = "ray-security/ray-integrations/aws" and version = "~> 1.1".
   source = "../../"
 
   # ---------- Required ----------
@@ -21,6 +21,9 @@ module "ray_security" {
   external_id = "REPLACE_ME"
 
   # ---------- Optional (uncomment to change) ----------
+
+  # Stop before any change if you are signed in to a different AWS account.
+  # account_id = "123456789012"
 
   # Only these buckets (default: all). Include the bucket your CloudTrail and S3 access logs go to.
   # s3_bucket_names = ["my-data-bucket", "my-logs-bucket"]
@@ -33,9 +36,4 @@ module "ray_security" {
 
   # Only in your AWS Organizations management account, if you use Identity Center.
   # enable_identity_center = true
-}
-
-output "role_arn" {
-  description = "Enter the 12-digit account ID from this ARN on the Ray Security S3 setup screen"
-  value       = module.ray_security.role_arn
 }

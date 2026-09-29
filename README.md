@@ -98,10 +98,6 @@ module "ray_security" {
   # access_analyzer_regions = ["us-east-1"]                          # your buckets' regions; AWS charges for it
   # enable_identity_center  = true                                   # management account only
 }
-
-output "role_arn" {
-  value = module.ray_security.role_arn
-}
 ```
 
 Both account lines stop Terraform when you are signed in to a different account, before it changes anything.
@@ -119,11 +115,11 @@ terraform init
 terraform apply
 ```
 
-Terraform lists what it will create and asks you to type `yes`. It then prints `role_arn`.
+Terraform lists what it will create and asks you to type `yes`. It ends with `Apply complete!`.
 
 ## Step 5 — Connect in Ray Security
 
-On the S3 setup screen, enter the 12-digit AWS account ID (it is inside `role_arn`) and press **Test
+On the S3 setup screen, enter the 12-digit AWS account ID you applied in and press **Test
 connection**. IAM changes can take a few seconds to apply; retry once if the first test fails.
 
 Test connection assumes the role once with your External ID, and twice more without it and with a wrong
