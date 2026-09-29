@@ -14,7 +14,7 @@ The whole install is: install Terraform, sign in to AWS, paste one file, run two
 
 ---
 
-## Step 1 — Install Terraform (1.6 or later)
+## Step 1 — Install Terraform (1.11 or later)
 
 **macOS**
 
@@ -36,8 +36,8 @@ Then close and reopen PowerShell. Without `winget`, download the zip from
 **AWS CloudShell:** it has AWS credentials already but no Terraform. Install it in your home directory:
 
 ```sh
-curl -fsSLO https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
-unzip terraform_1.9.8_linux_amd64.zip -d ~/bin && export PATH=~/bin:$PATH
+curl -fsSLO https://releases.hashicorp.com/terraform/1.11.4/terraform_1.11.4_linux_amd64.zip
+unzip terraform_1.11.4_linux_amd64.zip -d ~/bin && export PATH=~/bin:$PATH
 ```
 
 **Check:**
@@ -46,7 +46,7 @@ unzip terraform_1.9.8_linux_amd64.zip -d ~/bin && export PATH=~/bin:$PATH
 terraform version
 ```
 
-You should see `Terraform v1.6` or newer. Use Terraform, not OpenTofu: `tofu` looks modules up in its own registry, where this module is not published.
+You should see `Terraform v1.11` or newer. Use Terraform, not OpenTofu: `tofu` looks modules up in its own registry, where this module is not published.
 
 ## Step 2 — Sign in to the AWS account
 

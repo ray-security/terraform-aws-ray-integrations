@@ -3,7 +3,7 @@
 # See ../../README.md for the step-by-step guide.
 
 terraform {
-  required_version = ">= 1.6.0"
+  required_version = ">= 1.11.0"
 }
 
 provider "aws" {
