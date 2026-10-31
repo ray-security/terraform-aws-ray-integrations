@@ -31,6 +31,9 @@ module "ray_security" {
   # Your objects or log files are encrypted with SSE-KMS.
   # include_kms_permissions = true
 
+  # Let remediation actions run from Ray Security change bucket policies, public access and object tags.
+  # enable_remediation = true
+
   # Show who can access each bucket. Creates an Access Analyzer per region (AWS charges for it).
   # access_analyzer_regions = ["us-east-1"]
 

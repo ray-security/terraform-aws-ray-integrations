@@ -17,6 +17,15 @@ resource "aws_iam_role_policy" "this" {
   policy = data.aws_iam_policy_document.additional_read_access.json
 }
 
+# Opt-in write access for remediation actions started from Ray Security
+resource "aws_iam_role_policy" "remediation" {
+  count = var.enable_remediation ? 1 : 0
+
+  name   = var.remediation_policy_name
+  role   = var.role_name
+  policy = data.aws_iam_policy_document.remediation.json
+}
+
 data "aws_iam_policy_document" "additional_read_access" {
   # Allow read-only operations at the bucket level
   statement {
@@ -176,5 +185,34 @@ data "aws_iam_policy_document" "additional_read_access" {
     ]
 
     resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "remediation" {
+  # Revoke a principal (bucket policy) or everyone (Block Public Access); delete covers the revert
+  statement {
+    sid    = "S3BucketRemediation"
+    effect = "Allow"
+
+    actions = [
+      "s3:PutBucketPolicy",
+      "s3:DeleteBucketPolicy",
+      "s3:PutBucketPublicAccessBlock",
+    ]
+
+    resources = local.bucket_arns
+  }
+
+  # Apply an object tag, and remove the tag set again on revert
+  statement {
+    sid    = "S3ObjectTagging"
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObjectTagging",
+      "s3:DeleteObjectTagging",
+    ]
+
+    resources = local.bucket_object_arns
   }
 }

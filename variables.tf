@@ -50,6 +50,12 @@ variable "include_kms_permissions" {
   default     = false
 }
 
+variable "enable_remediation" {
+  description = "Let Ray Security change bucket policies, Block Public Access and object tags on these buckets when you run a remediation action. Off keeps the role read-only"
+  type        = bool
+  default     = false
+}
+
 variable "enable_identity_center" {
   description = "Create the Identity Center role. Set true only in your AWS Organizations management account"
   type        = bool

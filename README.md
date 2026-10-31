@@ -121,6 +121,7 @@ module "ray_security" {
   # Optional:
   # s3_bucket_names         = ["my-data-bucket", "my-logs-bucket"]  # default: all buckets
   # include_kms_permissions = true                                   # SSE-KMS objects or log files
+  # enable_remediation      = true                                   # allow remediation actions from Ray Security
   # access_analyzer_regions = ["us-east-1"]                          # your buckets' regions; AWS charges for it
   # enable_identity_center  = true                                   # management account only
 }
@@ -213,6 +214,7 @@ terraform destroy
 | `role_name` | name of the S3 scanning role | `RaySecurityRole` |
 | `s3_bucket_names` | buckets Ray Security may read; empty = all | `[]` |
 | `include_kms_permissions` | allow SSE-KMS decrypt | `false` |
+| `enable_remediation` | allow remediation actions: change bucket policies, Block Public Access and object tags on the scoped buckets | `false` (read-only) |
 | `enable_identity_center` | create the Identity Center role (management account only) | `false` |
 | `identity_center_role_name` | name of the Identity Center role | `RaySecurityIdentityCenterRole` |
 | `access_analyzer_regions` | regions to create an account-internal Access Analyzer in; empty = none | `[]` |

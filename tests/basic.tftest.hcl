@@ -161,3 +161,40 @@ run "no_account_check_by_default" {
     error_message = "without account_id the module must not call STS"
   }
 }
+
+run "remediation_off_by_default" {
+  command = plan
+
+  assert {
+    condition     = module.s3_access[0].remediation_policy_json == null
+    error_message = "the role must stay read-only unless enable_remediation is set"
+  }
+}
+
+run "remediation_scoped_to_buckets" {
+  command = plan
+
+  variables {
+    enable_remediation = true
+    s3_bucket_names    = ["data-bucket"]
+  }
+
+  assert {
+    condition = toset(flatten([for s in jsondecode(module.s3_access[0].remediation_policy_json).Statement : s.Resource])) == toset([
+      "arn:aws:s3:::data-bucket",
+      "arn:aws:s3:::data-bucket/*",
+    ])
+    error_message = "remediation must reach only the scoped buckets and their objects"
+  }
+
+  assert {
+    condition = toset(flatten([for s in jsondecode(module.s3_access[0].remediation_policy_json).Statement : s.Action])) == toset([
+      "s3:PutBucketPolicy",
+      "s3:DeleteBucketPolicy",
+      "s3:PutBucketPublicAccessBlock",
+      "s3:PutObjectTagging",
+      "s3:DeleteObjectTagging",
+    ])
+    error_message = "remediation must grant exactly the writes the S3 actions make"
+  }
+}

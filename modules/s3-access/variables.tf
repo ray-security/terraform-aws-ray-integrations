@@ -20,3 +20,15 @@ variable "include_kms_permissions" {
   type        = bool
   default     = false
 }
+
+variable "enable_remediation" {
+  description = "Attach the remediation policy: change bucket policies, Block Public Access and object tags"
+  type        = bool
+  default     = false
+}
+
+variable "remediation_policy_name" {
+  description = "Name of the remediation inline policy"
+  type        = string
+  default     = "RaySecurityRemediationAccess"
+}
