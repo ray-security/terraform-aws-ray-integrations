@@ -197,8 +197,9 @@ when it is empty), and `s3:PutObjectTagging` and `s3:DeleteObjectTagging` on the
 - Account-level Block Public Access, which the role cannot change, still stops public access, but not a grant
   to a named AWS account.
 - IAM allows 10,240 characters for all inline policies of a role together. With remediation on, that is
-  roughly 35 to 45 listed buckets, depending on name length; `terraform plan` stops if the list is longer.
-  Leave `s3_bucket_names` empty to cover all buckets.
+  about 70 listed buckets with 10-character names, 50 with 20, 40 with 30 and 24 with 63 (one fewer with
+  `include_kms_permissions`); `terraform plan` stops if the list is longer. Leave `s3_bucket_names` empty to
+  cover all buckets.
 - A service control policy or bucket policy that denies these actions still wins, and the action fails with
   `AccessDenied`.
 
