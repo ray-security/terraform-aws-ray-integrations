@@ -180,21 +180,35 @@ run "remediation_scoped_to_buckets" {
   }
 
   assert {
-    condition = toset(flatten([for s in jsondecode(module.s3_access[0].remediation_policy_json).Statement : s.Resource])) == toset([
-      "arn:aws:s3:::data-bucket",
-      "arn:aws:s3:::data-bucket/*",
-    ])
-    error_message = "remediation must reach only the scoped buckets and their objects"
+    condition = {
+      for s in jsondecode(module.s3_access[0].remediation_policy_json).Statement :
+      s.Sid => { actions = toset(flatten([s.Action])), resources = toset(flatten([s.Resource])) }
+      } == {
+      S3BucketRemediation = {
+        actions   = toset(["s3:PutBucketPolicy", "s3:DeleteBucketPolicy", "s3:PutBucketPublicAccessBlock"])
+        resources = toset(["arn:aws:s3:::data-bucket"])
+      }
+      S3ObjectTagging = {
+        actions   = toset(["s3:PutObjectTagging", "s3:DeleteObjectTagging"])
+        resources = toset(["arn:aws:s3:::data-bucket/*"])
+      }
+    }
+    error_message = "bucket writes must target the scoped buckets and tag writes their objects, nothing more"
+  }
+}
+
+run "remediation_refuses_a_bucket_list_over_the_iam_size_limit" {
+  command = plan
+
+  module {
+    source = "./modules/s3-access"
   }
 
-  assert {
-    condition = toset(flatten([for s in jsondecode(module.s3_access[0].remediation_policy_json).Statement : s.Action])) == toset([
-      "s3:PutBucketPolicy",
-      "s3:DeleteBucketPolicy",
-      "s3:PutBucketPublicAccessBlock",
-      "s3:PutObjectTagging",
-      "s3:DeleteObjectTagging",
-    ])
-    error_message = "remediation must grant exactly the writes the S3 actions make"
+  variables {
+    role_name          = "RaySecurityRole"
+    enable_remediation = true
+    s3_bucket_names    = [for i in range(60) : "ray-security-scanned-bucket-${i}"]
   }
+
+  expect_failures = [aws_iam_role_policy.remediation]
 }

@@ -10,7 +10,7 @@ variable "inline_policy_name" {
 }
 
 variable "s3_bucket_names" {
-  description = "S3 buckets Ray Security may read. Empty means all buckets"
+  description = "S3 buckets Ray Security may read, and remediate with enable_remediation. Empty means all buckets"
   type        = list(string)
   default     = []
 }

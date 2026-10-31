@@ -8,6 +8,9 @@ locals {
   bucket_object_arns = length(var.s3_bucket_names) > 0 ? [
     for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}/*"
   ] : ["*"]
+
+  # IAM's limit for all inline policies of one role together, whitespace excluded
+  inline_policies_max_characters = 10240
 }
 
 # Inline policy that defines Ray Security's read-only access scope
@@ -24,6 +27,13 @@ resource "aws_iam_role_policy" "remediation" {
   name   = var.remediation_policy_name
   role   = var.role_name
   policy = data.aws_iam_policy_document.remediation.json
+
+  lifecycle {
+    precondition {
+      condition     = length(data.aws_iam_policy_document.additional_read_access.minified_json) + length(data.aws_iam_policy_document.remediation.minified_json) <= local.inline_policies_max_characters
+      error_message = "With enable_remediation, the role's inline policies exceed IAM's 10,240-character limit. List fewer buckets in s3_bucket_names, or leave it empty for all buckets."
+    }
+  }
 }
 
 data "aws_iam_policy_document" "additional_read_access" {
@@ -189,7 +199,7 @@ data "aws_iam_policy_document" "additional_read_access" {
 }
 
 data "aws_iam_policy_document" "remediation" {
-  # Revoke a principal (bucket policy) or everyone (Block Public Access); delete covers the revert
+  # PutBucketPublicAccessBlock also authorizes DeletePublicAccessBlock; DeleteBucketPolicy runs when a revoke empties the policy
   statement {
     sid    = "S3BucketRemediation"
     effect = "Allow"
