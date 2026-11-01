@@ -191,7 +191,9 @@ Ray Security reads CloudTrail log files and S3 server access logs **from the buc
 to the S3 role, so actions you or your policies run from Ray Security can block public access to a bucket,
 revoke a principal from a bucket policy and tag objects. It grants `s3:PutBucketPolicy`,
 `s3:DeleteBucketPolicy` and `s3:PutBucketPublicAccessBlock` on the buckets in `remediation_bucket_names`, and
-`s3:PutObjectTagging` and `s3:DeleteObjectTagging` on their objects. That list is required and never falls back
+`s3:PutObjectTagging` and `s3:DeleteObjectTagging` on their objects, with the reads these actions start from
+(`s3:GetBucketPolicy`, `s3:GetBucketPublicAccessBlock`, `s3:GetObjectTagging`), so they work even when
+`s3_bucket_names` leaves those buckets out. That list is required, takes plain bucket names, and never falls back
 to every bucket; `s3_bucket_names` only sets what Ray Security reads.
 
 - IAM cannot limit these permissions to tightening access: the role could also add a grant to a bucket
@@ -199,11 +201,14 @@ to every bucket; `s3_bucket_names` only sets what Ray Security reads.
   the buckets your logs and Terraform state are written to.
 - Account-level Block Public Access, which the role cannot change, still stops public access, but not a grant
   to a named AWS account.
-- IAM allows 10,240 characters for all inline policies of a role together: about 2,350 for the fixed
+- Tags go on an object's current version. Ray Security never sends a version id, so
+  `s3:PutObjectVersionTagging` and `s3:DeleteObjectVersionTagging` are not granted.
+- IAM allows 10,240 characters for all inline policies of a role together: about 2,420 for the fixed
   statements, 206 more with `include_kms_permissions`, and 2 × name length + 34 for each bucket in each list.
-  With 30-character names that is 42 buckets listed in both lists, or 83 in `remediation_bucket_names` alone
-  when `s3_bucket_names` is empty (73 and 146 with 10-character names, 24 and 49 with 63); `terraform plan`
-  stops if the lists are longer.
+  `terraform plan` stops 512 characters short of that limit, to leave room for policy names and later
+  additions: with 30-character names that is 38 buckets listed in both lists, or 77 in
+  `remediation_bucket_names` alone when `s3_bucket_names` is empty (67 and 135 with 10-character names, 22 and
+  45 with 63).
 - A service control policy or bucket policy that denies these actions still wins, and the action fails with
   `AccessDenied`.
 
@@ -240,7 +245,7 @@ terraform destroy
 | `s3_bucket_names` | buckets Ray Security may read; empty = all | `[]` |
 | `include_kms_permissions` | allow SSE-KMS decrypt | `false` |
 | `enable_remediation` | allow remediation actions: change bucket policies, Block Public Access and object tags on the buckets in `remediation_bucket_names`; needs `enable_s3` | `false` (read-only) |
-| `remediation_bucket_names` | buckets remediation actions may change; required with `enable_remediation`, never all buckets, no wildcards | `[]` |
+| `remediation_bucket_names` | buckets remediation actions may change; required with `enable_remediation` and refused without it; plain bucket names, never all buckets | `[]` |
 | `enable_identity_center` | create the Identity Center role (management account only) | `false` |
 | `identity_center_role_name` | name of the Identity Center role | `RaySecurityIdentityCenterRole` |
 | `access_analyzer_regions` | regions to create an account-internal Access Analyzer in; empty = none | `[]` |

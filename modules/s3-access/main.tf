@@ -15,6 +15,9 @@ locals {
 
   # IAM's limit for all inline policies of one role together, whitespace excluded
   inline_policies_max_characters = 10240
+
+  # Room left for policy-name overhead and small additions to the role's inline policies
+  inline_policies_headroom_characters = 512
 }
 
 # Inline policy that defines Ray Security's read-only access scope
@@ -34,8 +37,8 @@ resource "aws_iam_role_policy" "remediation" {
 
   lifecycle {
     precondition {
-      condition     = length(data.aws_iam_policy_document.additional_read_access.minified_json) + length(data.aws_iam_policy_document.remediation.minified_json) <= local.inline_policies_max_characters
-      error_message = "With enable_remediation, the role's inline policies exceed IAM's 10,240-character limit. List fewer buckets in remediation_bucket_names, or in s3_bucket_names (empty reads all buckets)."
+      condition     = length(data.aws_iam_policy_document.additional_read_access.minified_json) + length(data.aws_iam_policy_document.remediation.minified_json) <= local.inline_policies_max_characters - local.inline_policies_headroom_characters
+      error_message = "With enable_remediation, the role's inline policies come within 512 characters of IAM's 10,240-character limit. List fewer buckets in remediation_bucket_names, or in s3_bucket_names (empty reads all buckets)."
     }
   }
 }
@@ -209,6 +212,8 @@ data "aws_iam_policy_document" "remediation" {
     effect = "Allow"
 
     actions = [
+      "s3:GetBucketPolicy",
+      "s3:GetBucketPublicAccessBlock",
       "s3:PutBucketPolicy",
       "s3:DeleteBucketPolicy",
       "s3:PutBucketPublicAccessBlock",
@@ -217,12 +222,13 @@ data "aws_iam_policy_document" "remediation" {
     resources = local.remediation_bucket_arns
   }
 
-  # Apply an object tag, and remove the tag set again on revert
+  # Tags the current object version only: Ray never sends a versionId, which would need the *ObjectVersionTagging actions
   statement {
     sid    = "S3ObjectTagging"
     effect = "Allow"
 
     actions = [
+      "s3:GetObjectTagging",
       "s3:PutObjectTagging",
       "s3:DeleteObjectTagging",
     ]

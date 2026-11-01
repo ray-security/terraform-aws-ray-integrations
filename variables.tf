@@ -65,6 +65,21 @@ variable "remediation_bucket_names" {
   description = "Buckets remediation actions may change, required with enable_remediation. Leave out the buckets your logs and Terraform state are written to"
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = var.enable_remediation || length(var.remediation_bucket_names) == 0
+    error_message = "remediation_bucket_names only applies with enable_remediation = true."
+  }
+
+  validation {
+    condition     = !var.enable_remediation || length(var.remediation_bucket_names) > 0
+    error_message = "enable_remediation needs remediation_bucket_names: list the buckets remediation actions may change."
+  }
+
+  validation {
+    condition     = alltrue([for bucket in var.remediation_bucket_names : can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", bucket))])
+    error_message = "remediation_bucket_names takes plain S3 bucket names: 3-63 characters, lowercase letters, digits, dots and hyphens, no wildcards or paths."
+  }
 }
 
 variable "enable_identity_center" {

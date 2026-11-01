@@ -38,8 +38,8 @@ variable "remediation_bucket_names" {
   }
 
   validation {
-    condition     = alltrue([for bucket in var.remediation_bucket_names : !strcontains(bucket, "*") && !strcontains(bucket, "?")])
-    error_message = "remediation_bucket_names takes bucket names, not wildcards."
+    condition     = alltrue([for bucket in var.remediation_bucket_names : can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", bucket))])
+    error_message = "remediation_bucket_names takes plain S3 bucket names: 3-63 characters, lowercase letters, digits, dots and hyphens, no wildcards or paths."
   }
 }
 
