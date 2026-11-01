@@ -171,12 +171,13 @@ run "remediation_off_by_default" {
   }
 }
 
-run "remediation_scoped_to_buckets" {
+run "remediation_scoped_to_its_own_bucket_list" {
   command = plan
 
   variables {
-    enable_remediation = true
-    s3_bucket_names    = ["data-bucket"]
+    enable_remediation       = true
+    s3_bucket_names          = ["data-bucket", "logs-bucket"]
+    remediation_bucket_names = ["data-bucket"]
   }
 
   assert {
@@ -193,8 +194,55 @@ run "remediation_scoped_to_buckets" {
         resources = toset(["arn:aws:s3:::data-bucket/*"])
       }
     }
-    error_message = "bucket writes must target the scoped buckets and tag writes their objects, nothing more"
+    error_message = "bucket writes must target remediation_bucket_names and tag writes their objects, nothing more"
   }
+}
+
+run "remediation_never_covers_every_bucket" {
+  command = plan
+
+  variables {
+    enable_remediation       = true
+    remediation_bucket_names = ["data-bucket"]
+  }
+
+  assert {
+    condition = toset(flatten([
+      for s in jsondecode(module.s3_access[0].remediation_policy_json).Statement : s.Resource
+    ])) == toset(["arn:aws:s3:::data-bucket", "arn:aws:s3:::data-bucket/*"])
+    error_message = "with every bucket readable, remediation must still cover only remediation_bucket_names"
+  }
+}
+
+run "remediation_needs_its_bucket_list" {
+  command = plan
+
+  module {
+    source = "./modules/s3-access"
+  }
+
+  variables {
+    role_name          = "RaySecurityRole"
+    enable_remediation = true
+  }
+
+  expect_failures = [var.remediation_bucket_names]
+}
+
+run "remediation_refuses_wildcard_bucket_names" {
+  command = plan
+
+  module {
+    source = "./modules/s3-access"
+  }
+
+  variables {
+    role_name                = "RaySecurityRole"
+    enable_remediation       = true
+    remediation_bucket_names = ["*"]
+  }
+
+  expect_failures = [var.remediation_bucket_names]
 }
 
 run "remediation_refuses_a_bucket_list_over_the_iam_size_limit" {
@@ -205,9 +253,10 @@ run "remediation_refuses_a_bucket_list_over_the_iam_size_limit" {
   }
 
   variables {
-    role_name          = "RaySecurityRole"
-    enable_remediation = true
-    s3_bucket_names    = [for i in range(60) : "ray-security-scanned-bucket-${i}"]
+    role_name                = "RaySecurityRole"
+    enable_remediation       = true
+    s3_bucket_names          = [for i in range(60) : "ray-security-scanned-bucket-${i}"]
+    remediation_bucket_names = [for i in range(60) : "ray-security-scanned-bucket-${i}"]
   }
 
   expect_failures = [aws_iam_role_policy.remediation]

@@ -39,7 +39,7 @@ variable "role_name" {
 }
 
 variable "s3_bucket_names" {
-  description = "Buckets Ray Security may read, and remediate when enable_remediation is set. Empty means all buckets. Include the bucket your CloudTrail and S3 access logs are written to"
+  description = "Buckets Ray Security may read. Empty means all buckets. Include the bucket your CloudTrail and S3 access logs are written to"
   type        = list(string)
   default     = []
 }
@@ -51,7 +51,7 @@ variable "include_kms_permissions" {
 }
 
 variable "enable_remediation" {
-  description = "Let remediation actions run from Ray Security change bucket policies, Block Public Access and object tags on the buckets in s3_bucket_names (all buckets when empty). Off keeps the role read-only"
+  description = "Let remediation actions run from Ray Security change bucket policies, Block Public Access and object tags on the buckets in remediation_bucket_names. Off keeps the role read-only"
   type        = bool
   default     = false
 
@@ -59,6 +59,12 @@ variable "enable_remediation" {
     condition     = !var.enable_remediation || var.enable_s3
     error_message = "enable_remediation extends the S3 role, so it needs enable_s3 = true."
   }
+}
+
+variable "remediation_bucket_names" {
+  description = "Buckets remediation actions may change, required with enable_remediation. Leave out the buckets your logs and Terraform state are written to"
+  type        = list(string)
+  default     = []
 }
 
 variable "enable_identity_center" {
