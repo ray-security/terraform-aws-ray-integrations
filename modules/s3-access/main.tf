@@ -8,6 +8,16 @@ locals {
   bucket_object_arns = length(var.s3_bucket_names) > 0 ? [
     for bucket in var.s3_bucket_names : "arn:aws:s3:::${bucket}/*"
   ] : ["*"]
+
+  # Remediation covers only the buckets listed for it, never all buckets
+  remediation_bucket_arns        = [for bucket in var.remediation_bucket_names : "arn:aws:s3:::${bucket}"]
+  remediation_bucket_object_arns = [for bucket in var.remediation_bucket_names : "arn:aws:s3:::${bucket}/*"]
+
+  # IAM's limit for all inline policies of one role together, whitespace excluded
+  inline_policies_max_characters = 10240
+
+  # Room left for policy-name overhead and small additions to the role's inline policies
+  inline_policies_headroom_characters = 512
 }
 
 # Inline policy that defines Ray Security's read-only access scope
@@ -15,6 +25,22 @@ resource "aws_iam_role_policy" "this" {
   name   = var.inline_policy_name
   role   = var.role_name
   policy = data.aws_iam_policy_document.additional_read_access.json
+}
+
+# Opt-in write access for remediation actions started from Ray Security
+resource "aws_iam_role_policy" "remediation" {
+  count = var.enable_remediation ? 1 : 0
+
+  name   = var.remediation_policy_name
+  role   = var.role_name
+  policy = data.aws_iam_policy_document.remediation.json
+
+  lifecycle {
+    precondition {
+      condition     = length(data.aws_iam_policy_document.additional_read_access.minified_json) + length(data.aws_iam_policy_document.remediation.minified_json) <= local.inline_policies_max_characters - local.inline_policies_headroom_characters
+      error_message = "With enable_remediation, the role's inline policies come within 512 characters of IAM's 10,240-character limit. List fewer buckets in remediation_bucket_names, or in s3_bucket_names (empty reads all buckets)."
+    }
+  }
 }
 
 data "aws_iam_policy_document" "additional_read_access" {
@@ -176,5 +202,37 @@ data "aws_iam_policy_document" "additional_read_access" {
     ]
 
     resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "remediation" {
+  # PutBucketPublicAccessBlock also authorizes DeletePublicAccessBlock; DeleteBucketPolicy runs when a revoke empties the policy
+  statement {
+    sid    = "S3BucketRemediation"
+    effect = "Allow"
+
+    actions = [
+      "s3:GetBucketPolicy",
+      "s3:GetBucketPublicAccessBlock",
+      "s3:PutBucketPolicy",
+      "s3:DeleteBucketPolicy",
+      "s3:PutBucketPublicAccessBlock",
+    ]
+
+    resources = local.remediation_bucket_arns
+  }
+
+  # Tags the current object version only: Ray never sends a versionId, which would need the *ObjectVersionTagging actions
+  statement {
+    sid    = "S3ObjectTagging"
+    effect = "Allow"
+
+    actions = [
+      "s3:GetObjectTagging",
+      "s3:PutObjectTagging",
+      "s3:DeleteObjectTagging",
+    ]
+
+    resources = local.remediation_bucket_object_arns
   }
 }

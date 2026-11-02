@@ -14,7 +14,7 @@ module "role" {
   count  = var.enable_s3 ? 1 : 0
 
   name                = var.role_name
-  description         = "Ray Security read-only access to S3, CloudTrail, AWS Config, Access Analyzer and IAM"
+  description         = var.enable_remediation ? "Ray Security access to S3, CloudTrail, AWS Config, Access Analyzer and IAM, with S3 remediation" : "Ray Security read-only access to S3, CloudTrail, AWS Config, Access Analyzer and IAM"
   trusted_account_arn = var.trusted_account_arn
   external_id         = var.external_id
   tags                = var.tags
@@ -24,9 +24,11 @@ module "s3_access" {
   source = "./modules/s3-access"
   count  = var.enable_s3 ? 1 : 0
 
-  role_name               = module.role[0].name
-  s3_bucket_names         = var.s3_bucket_names
-  include_kms_permissions = var.include_kms_permissions
+  role_name                = module.role[0].name
+  s3_bucket_names          = var.s3_bucket_names
+  include_kms_permissions  = var.include_kms_permissions
+  enable_remediation       = var.enable_remediation
+  remediation_bucket_names = var.remediation_bucket_names
 }
 
 module "identity_center_role" {

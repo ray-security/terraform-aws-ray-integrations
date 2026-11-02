@@ -50,6 +50,38 @@ variable "include_kms_permissions" {
   default     = false
 }
 
+variable "enable_remediation" {
+  description = "Let remediation actions run from Ray Security change bucket policies, Block Public Access and object tags on the buckets in remediation_bucket_names. Off keeps the role read-only"
+  type        = bool
+  default     = false
+
+  validation {
+    condition     = !var.enable_remediation || var.enable_s3
+    error_message = "enable_remediation extends the S3 role, so it needs enable_s3 = true."
+  }
+}
+
+variable "remediation_bucket_names" {
+  description = "Buckets remediation actions may change, required with enable_remediation. Leave out the buckets your logs and Terraform state are written to"
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = var.enable_remediation || length(var.remediation_bucket_names) == 0
+    error_message = "remediation_bucket_names only applies with enable_remediation = true."
+  }
+
+  validation {
+    condition     = !var.enable_remediation || length(var.remediation_bucket_names) > 0
+    error_message = "enable_remediation needs remediation_bucket_names: list the buckets remediation actions may change."
+  }
+
+  validation {
+    condition     = alltrue([for bucket in var.remediation_bucket_names : can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", bucket))])
+    error_message = "remediation_bucket_names takes plain S3 bucket names: 3-63 characters, lowercase letters, digits, dots and hyphens, no wildcards or paths."
+  }
+}
+
 variable "enable_identity_center" {
   description = "Create the Identity Center role. Set true only in your AWS Organizations management account"
   type        = bool

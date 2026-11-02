@@ -1,6 +1,7 @@
 # Ray Security AWS integration
 
-Creates the read-only IAM roles Ray Security uses to scan your AWS accounts. You run it with your own AWS
+Creates the IAM roles Ray Security uses to scan your AWS accounts, read-only unless you set `enable_remediation`
+([Remediation actions](#remediation-actions)). You run it with your own AWS
 credentials; Ray Security never receives them. Each role trusts the Ray Security AWS account only when it
 presents your **External ID**, shown on the Ray Security S3 setup screen.
 
@@ -113,16 +114,18 @@ provider "aws" {
 
 module "ray_security" {
   source  = "ray-security/ray-integrations/aws"
-  version = "~> 1.1"
+  version = "~> 1.2"
 
   account_id  = "123456789012"   # the same account
   external_id = "REPLACE_ME"     # from the Ray Security S3 setup screen
 
   # Optional:
-  # s3_bucket_names         = ["my-data-bucket", "my-logs-bucket"]  # default: all buckets
-  # include_kms_permissions = true                                   # SSE-KMS objects or log files
-  # access_analyzer_regions = ["us-east-1"]                          # your buckets' regions; AWS charges for it
-  # enable_identity_center  = true                                   # management account only
+  # s3_bucket_names          = ["my-data-bucket", "my-logs-bucket"]  # default: all buckets
+  # include_kms_permissions  = true                                  # SSE-KMS objects or log files
+  # enable_remediation       = true                                  # allow remediation actions from Ray Security
+  # remediation_bucket_names = ["my-data-bucket"]                    # the buckets they may change; needed with enable_remediation
+  # access_analyzer_regions  = ["us-east-1"]                         # your buckets' regions; AWS charges for it
+  # enable_identity_center   = true                                  # management account only
 }
 ```
 
@@ -182,10 +185,38 @@ Ray Security reads CloudTrail log files and S3 server access logs **from the buc
   charges for data events.
 - SSE-KMS encrypted log files need `include_kms_permissions = true`.
 
+## Remediation actions
+
+`enable_remediation = true` (module 1.2 or later) adds a second inline policy, `RaySecurityRemediationAccess`,
+to the S3 role, so actions you or your policies run from Ray Security can block public access to a bucket,
+revoke a principal from a bucket policy and tag objects. It grants `s3:PutBucketPolicy`,
+`s3:DeleteBucketPolicy` and `s3:PutBucketPublicAccessBlock` on the buckets in `remediation_bucket_names`, and
+`s3:PutObjectTagging` and `s3:DeleteObjectTagging` on their objects, with the reads these actions start from
+(`s3:GetBucketPolicy`, `s3:GetBucketPublicAccessBlock`, `s3:GetObjectTagging`), so they work even when
+`s3_bucket_names` leaves those buckets out. That list is required, takes plain bucket names, and never falls back
+to every bucket; `s3_bucket_names` only sets what Ray Security reads.
+
+- IAM cannot limit these permissions to tightening access: the role could also add a grant to a bucket
+  policy, or loosen a bucket's Block Public Access. List only the buckets you want remediated, and leave out
+  the buckets your logs and Terraform state are written to.
+- Account-level Block Public Access, which the role cannot change, still stops public access, but not a grant
+  to a named AWS account.
+- Tags go on an object's current version. Ray Security never sends a version id, so
+  `s3:PutObjectVersionTagging` and `s3:DeleteObjectVersionTagging` are not granted.
+- IAM allows 10,240 characters for all inline policies of a role together: about 2,420 for the fixed
+  statements, 206 more with `include_kms_permissions`, and 2 × name length + 34 for each bucket in each list.
+  `terraform plan` stops 512 characters short of that limit, to leave room for policy names and later
+  additions: with 30-character names that is 38 buckets listed in both lists, or 77 in
+  `remediation_bucket_names` alone when `s3_bucket_names` is empty (67 and 135 with 10-character names, 22 and
+  45 with 63).
+- A service control policy or bucket policy that denies these actions still wins, and the action fails with
+  `AccessDenied`.
+
 ## Update or remove
 
 Terraform needs its state to change or remove what it created. With the S3 backend, any folder with the same
 `main.tf` finds it after `terraform init`. Without it, keep the folder with `main.tf` and `terraform.tfstate`.
+After raising `version` in `main.tf`, run `terraform init -upgrade` first.
 Change a value and run `terraform apply` again, or remove everything with:
 
 ```sh
@@ -213,6 +244,8 @@ terraform destroy
 | `role_name` | name of the S3 scanning role | `RaySecurityRole` |
 | `s3_bucket_names` | buckets Ray Security may read; empty = all | `[]` |
 | `include_kms_permissions` | allow SSE-KMS decrypt | `false` |
+| `enable_remediation` | allow remediation actions: change bucket policies, Block Public Access and object tags on the buckets in `remediation_bucket_names`; needs `enable_s3` | `false` (read-only) |
+| `remediation_bucket_names` | buckets remediation actions may change; required with `enable_remediation` and refused without it; plain bucket names, never all buckets | `[]` |
 | `enable_identity_center` | create the Identity Center role (management account only) | `false` |
 | `identity_center_role_name` | name of the Identity Center role | `RaySecurityIdentityCenterRole` |
 | `access_analyzer_regions` | regions to create an account-internal Access Analyzer in; empty = none | `[]` |
@@ -231,6 +264,6 @@ terraform destroy
 | Module | Creates |
 |---|---|
 | [`modules/role`](modules/role) | an IAM role that trusts the Ray Security AWS account with your External ID |
-| [`modules/s3-access`](modules/s3-access) | the read-only inline policy for S3, KMS, IAM, CloudTrail, AWS Config and Access Analyzer |
+| [`modules/s3-access`](modules/s3-access) | the read-only inline policy for S3, KMS, IAM, CloudTrail, AWS Config and Access Analyzer, and the opt-in remediation policy |
 | [`modules/identity-center-access`](modules/identity-center-access) | the read-only inline policy for Identity Store, SSO Admin and Organizations |
 | [`modules/access-analyzer`](modules/access-analyzer) | an account-internal analyzer per region, analyzing S3 buckets only |
