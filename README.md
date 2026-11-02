@@ -7,7 +7,7 @@ presents your **External ID**, shown on the Ray Security S3 setup screen.
 
 | Part | Where you apply it | What Ray Security reads |
 |---|---|---|
-| S3 role (`RaySecurityRole`, on by default) | every AWS account Ray Security scans | S3 buckets and objects, bucket access settings, IAM users/roles/groups, Access Analyzer findings, access logs |
+| S3 role (`RaySecurityRole`, on by default) | every AWS account Ray Security scans | S3 buckets and objects, bucket access settings, IAM users, groups and roles with their policies, Access Analyzer findings, access logs |
 | Identity Center role (`enable_identity_center`) | your AWS Organizations management account, once | Identity Center users, groups, permission sets and account assignments |
 | Access Analyzer (`access_analyzer_regions`) | the scanned accounts, optional | who can access each bucket |
 
@@ -185,6 +185,13 @@ Ray Security reads CloudTrail log files and S3 server access logs **from the buc
   charges for data events.
 - SSE-KMS encrypted log files need `include_kms_permissions = true`.
 
+## Which files each identity can open
+
+From module 1.3 the S3 role reads every IAM user, group and role's policies with
+`iam:GetAccountAuthorizationDetails`, so Ray Security shows each file with the groups, roles and users whose
+policies reach it, and marks a group member whose own policy denies it. With an older module, every file of a
+bucket shows the principals Access Analyzer reports for the whole bucket.
+
 ## Remediation actions
 
 `enable_remediation = true` (module 1.2 or later) adds a second inline policy, `RaySecurityRemediationAccess`,
@@ -203,12 +210,12 @@ to every bucket; `s3_bucket_names` only sets what Ray Security reads.
   to a named AWS account.
 - Tags go on an object's current version. Ray Security never sends a version id, so
   `s3:PutObjectVersionTagging` and `s3:DeleteObjectVersionTagging` are not granted.
-- IAM allows 10,240 characters for all inline policies of a role together: about 2,420 for the fixed
-  statements, 206 more with `include_kms_permissions`, and 2 × name length + 34 for each bucket in each list.
+- IAM allows 10,240 characters for all inline policies of a role together: about 2,450 for the fixed
+  statements, 206 more with `include_kms_permissions`, and 2 × name length + 38 for each bucket in each list.
   `terraform plan` stops 512 characters short of that limit, to leave room for policy names and later
-  additions: with 30-character names that is 38 buckets listed in both lists, or 77 in
-  `remediation_bucket_names` alone when `s3_bucket_names` is empty (67 and 135 with 10-character names, 22 and
-  45 with 63).
+  additions: with 30-character names that is 37 buckets listed in both lists, or 74 in
+  `remediation_bucket_names` alone when `s3_bucket_names` is empty (62 and 125 with 10-character names, 22 and
+  44 with 63).
 - A service control policy or bucket policy that denies these actions still wins, and the action fails with
   `AccessDenied`.
 

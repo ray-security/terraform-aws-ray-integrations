@@ -174,7 +174,7 @@ data "aws_iam_policy_document" "additional_read_access" {
     sid    = "IAMReadAccess"
     effect = "Allow"
     actions = [
-
+      "iam:GetAccountAuthorizationDetails",
       "iam:ListRoles",
       "iam:GetRole",
       "iam:GetRolePolicy",
